@@ -1,4 +1,3 @@
-
 #/bin/bash
 
 #    This program is free software: you can redistribute it and/or modify
@@ -31,26 +30,39 @@
 #    Datum:
 #    Version: 0.2
 
-##########################################################################################
-
-#    Anpassbare Variablen
+##########################
+#  Anpassbare Variablen  #
+##########################
 
 log_location="/var/log/192.168.0.8/syslog.log"    # Speicherpfad der Syslogdatei
 ssid="Test_Gast"    # zu Anlalysierende SSID
-databas="csv"    # Speichervariante der Enddaten. Mögliche Werte: csv, sql
+database="csv"    # Speichervariante der Enddaten. Mögliche Werte: csv, sql
 mac_only="false"    # Nur MAC-Adressen speichern = true. MAC-Adresse und Benutzername speichern = false.
 
-#########################################################################################
+#####################
+#  Leere Variablen  #
+#####################
 
-#    Funktionen
+mac_error=""
+
+#####################
+#  Hauptfunktionen  #
+#####################
+
+function func_check(){
+        if [ "$mac_only" != "true" -o "$mac_only" != "false" ]
+        then
+                mac_error="true"
+        fi
+}
 
 function func_analyse(){
-        cat $log_location | grep "$ssid" | grep "User" > log_redu.tmp
+        cat $log_location | grep "$ssid" | grep "User" > log_redu.tmp.$$    # Log auf die wichtigen Informationen reduzieren.
         while read input
         do
                 # Type des Log-Eintrag ermitteln
                 func_log_typ
-                if [ "$connection" = ""  ]
+                if [ "$connection" = ""  ] # Auf Roaming und sontige Einträge reagieren.
                 then
                         continue
                 fi
@@ -60,8 +72,26 @@ function func_analyse(){
                 func_time
                 # Eintrag vorbereiten
                 func_pre_entry
-        done < log_redu.tmp
+        done < log_redu.tmp.$$
 }
+
+function func_data_csv() {
+        cat pre_entry_join.tmp | cut -d";" -f5 | uniq | sort > uniq_mac.tmp
+        func_header_csv
+        func join_csv
+}
+
+function func_data_sql(){
+        echo "sql"
+}
+
+function func_end(){
+        rm *.$$
+        exit
+}
+######################
+#   Nebenfunktionen  #
+######################
 
 function func_mac_user(){
         if [ "$mac_only" = "true" ]
@@ -143,8 +173,28 @@ function func_time(){
         year=$(date +%y)
 }
 
-#########################################################################################
+function func_header_csv(){
+        echo "Username;MAC-Adresse;Anzahl Sessionen;Start Session;Ende Session;Total RX;Total TX" > log_$ssid.csv
+}
 
-#   Programm
+function func_join_csv(){
+        while read input
+        do
+
+        done < uniq_mac.tmp
+}
+
+##############
+#  Programm  #
+##############
+
+func_check
 func_analyse
-exit
+if [ "$database" = "csv" ]
+then
+        func_data_csv
+elif [ "$database" = "mysql" ]
+then
+        func_data_sql
+fi
+func_end
