@@ -50,9 +50,17 @@ function func_analyse(){
         do
                 # Type des Log-Eintrag ermitteln
                 func_log_typ
+                if [ "$connection" = ""  ]
+                then
+                        continue
+                fi
                 # MAC-Adresse und Benutzername ermitteln
-                #func_mac_user
-        done < test.log #log_redu.tmp
+                func_mac_user
+                # Uhrzeit der Aktivität ermitteln
+                func_time
+                # Eintrag vorbereiten
+                func_pre_entry
+        done < log_redu.tmp
 }
 
 function func_mac_user(){
@@ -81,12 +89,60 @@ function func_log_typ(){
         leave_d=$(echo $input | grep "verlässt" | cut -d" " -f1)
         if [ "$joins_e" != "" -o "$joins_d" != "" ]
         then
-                join="true"
+                connection="join"
         elif [ "$leave_e" != "" -o  "$leave_d" != "" ]
         then
-                leave="true"
+                connection="leave"
+                session_time=$(echo $input | cut -d"[" -f5 | cut -d" " -f1)
+                rx=$(echo $input | cut -d"[" -f6 | cut -d"]" -f1)
+                tx=$(echo $input | cut -d"[" -f7 | cut -d"]" -f1)
         fi
 }
+
+function func_pre_entry(){
+        if [ "$mac_only" = "true" ]
+        then
+                if [ "$connection" = "join" ]
+                then
+                        echo "$year;$month;$day;$clock;$mac" >> pre_entry_join.tmp
+                elif [ "$connection" = "leave" ]
+                then
+                        echo "$year;$month;$day;$clock;$mac;$session_time;$rx;$tx" >> pre_entry_leave.tmp
+                fi
+        elif [ "$mac_only" = "false" ]
+        then
+                if [ "$connection" = "join" ]
+                then
+                        echo "$year;$month;$day;$clock;$mac;$username" >> pre_entry_join.tmp
+                elif [ "$connection" = "leave" ]
+                then
+                        echo "$year;$month;$day;$clock;$mac;$username;$session_time;$rx;$tx" >> pre_entry_leve.tmp
+                fi
+
+        fi
+}
+function func_time(){
+        month_pre=$(echo $input | cut -d" " -f1)
+        day=$(echo $input | cut -d" " -f2)
+        clock=$(echo $input | cut -d" " -f3)
+        case "$month_pre" in
+                Jan) month="01" ;;
+                Feb) month="02" ;;
+                Mar) month="03" ;;
+                Apr) month="04" ;;
+                May) month="05" ;;
+                June) month="06" ;;
+                July) month="07" ;;
+                Aug) month="08" ;;
+                Sept) month="09" ;;
+                Oct) month="10" ;;
+                Nov) month="11" ;;
+                Dec) month="12" ;;
+                *) month="$month_pre" ;;
+        esac
+        year=$(date +%y)
+}
+
 #########################################################################################
 
 #   Programm
