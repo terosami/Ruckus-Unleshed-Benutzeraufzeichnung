@@ -75,10 +75,13 @@ function func_analyse(){
         done < log_redu.tmp.$$
 }
 
+function func_preparation(){
+        cat pre_entry_join.tmp | cut -d";" -f3 | uniq | sort > uniq_mac.tmp.$$
+        func_join_final
+}
+
 function func_data_csv() {
-        cat pre_entry_join.tmp | cut -d";" -f5 | uniq | sort > uniq_mac.tmp
-        func_header_csv
-        func join_csv
+        echo "csv"
 }
 
 function func_data_sql(){
@@ -134,19 +137,19 @@ function func_pre_entry(){
         then
                 if [ "$connection" = "join" ]
                 then
-                        echo "$year;$month;$day;$clock;$mac" >> pre_entry_join.tmp
+                        echo "$year.$month.$day;$clock;$mac" >> pre_entry_join.tmp
                 elif [ "$connection" = "leave" ]
                 then
-                        echo "$year;$month;$day;$clock;$mac;$session_time;$rx;$tx" >> pre_entry_leave.tmp
+                        echo "$year.$month.$day;$clock;$mac;$session_time;$rx;$tx" >> pre_entry_leave.tmp
                 fi
         elif [ "$mac_only" = "false" ]
         then
                 if [ "$connection" = "join" ]
                 then
-                        echo "$year;$month;$day;$clock;$mac;$username" >> pre_entry_join.tmp
+                        echo "$year.$month.$day;$clock;$mac;$username" >> pre_entry_join.tmp
                 elif [ "$connection" = "leave" ]
                 then
-                        echo "$year;$month;$day;$clock;$mac;$username;$session_time;$rx;$tx" >> pre_entry_leve.tmp
+                        echo "$year.$month.$day;$clock;$mac;$username;$session_time;$rx;$tx" >> pre_entry_leve.tmp
                 fi
 
         fi
@@ -177,19 +180,26 @@ function func_header_csv(){
         echo "Username;MAC-Adresse;Anzahl Sessionen;Start Session;Ende Session;Total RX;Total TX" > log_$ssid.csv
 }
 
-function func_join_csv(){
+function func_join_final(){
         while read input
         do
-
-        done < uniq_mac.tmp
+                cat pre_entry_join.tmp | grep "$input" | cut -d";" -f4| uniq > username.tmp.$$
+                while read input2
+                do
+                        number_session=$(cat pre_entry_join.tmp | grep "$input2" | wc -l)
+                        first_session=$(cat pre_entry_join.tmp | grep "$input2" | head -n1| cut -d";" -f1-2)
+                        echo "$input2;$input;$number_session;$first_session" >> entry_join.tmp
+                done < username.tmp.$$
+        done < uniq_mac.tmp.$$
 }
 
 ##############
 #  Programm  #
 ##############
 
-func_check
+#func_check
 func_analyse
+func_preparation
 if [ "$database" = "csv" ]
 then
         func_data_csv
