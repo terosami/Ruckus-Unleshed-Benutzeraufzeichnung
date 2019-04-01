@@ -62,10 +62,21 @@ function func_check(){
         then
                 mac_error="true"
         fi
+		
+		if [ $mac_error = "true" ]
+		then
+			echo "Falscher Wert bei der Variabel " '"$mac_only".'
+            echo "Der Aktuelle Wert ist: " $mac_only
+            # echo -e "\nDie einzig zugelassen Werte sind: true oder false"
+            echo -e "\nDen Wert im Script anpassen und erneut durchführen"
+            echo -e "\n\nDas Script wird nun beendet und ein entsprechender Log-Eintrag wird angelegt"
+            logger guest_user.sh: error mac_only wronge value. ssid: $ssid, mac_only: $mac_only
+            exit
+		fi
 }
 
 function func_analyse(){
-        cat "$log_location" | grep "$ssid" | grep "User" > log_redu.tmp.$$    # Log auf die wichtigen Informationen reduzieren.
+       grep "$ssid"  "$log_location"| grep "User" > log_redu.tmp.$$    # Log auf die wichtigen Informationen reduzieren.
         while read -r input_analyse
         do
                 # Type des Log-Eintrag ermitteln
@@ -84,10 +95,10 @@ function func_analyse(){
 }
 
 function func_preparation(){
-        cat pre_entry_join.tmp.$$ | cut -d";" -f3 | uniq | sort > uniq_mac.tmp.$$
+        cut -d";" -f3 pre_entry_join.tmp.$$ | uniq | sort > uniq_mac.tmp.$$
         func_join_final
         func_leave_final
-}
+		}
 
 function func_data_csv(){
         func_header_csv
@@ -116,14 +127,6 @@ function func_mac_user(){
         then
                 mac=$(echo "$input_analyse" | cut -d"[" -f2 | cut -d"]" -f1 | cut -d"@" -f2)
                 username=$(echo "$input_analyse" | cut -d"[" -f2 | cut -d"]" -f1 | cut -d"@" -f1)
-        else
-                echo "Falscher Wert bei der Variabel " '"$mac_only".'
-                echo "Der Aktuelle Wert ist: " $mac_only
-                echo -e "\nDie einzig zugelassen Werte sind: true oder false"
-                echo -e "\nDen Wert im Script anpassen und erneut durchführen"
-                echo -e "\n\nDas Script wird nun beendet und ein entsprechender Log-Eintrag wird angelegt"
-                logger guest_user.sh: error mac_only wronge value. ssid: $ssid, mac_only: $mac_only
-                exit
         fi
 }
 
@@ -163,7 +166,6 @@ function func_pre_entry(){
                 then
                         echo "$year.$month.$day;$clock;$mac;$username;$session_time;$rx;$tx" >> pre_entry_leave.tmp.$$
                 fi
-
         fi
 }
 function func_time(){
@@ -191,12 +193,12 @@ function func_time(){
 function func_join_final(){
         while read -r input_join_final
         do
-                cat pre_entry_join.tmp.$$ | grep "$input_join_final" | cut -d";" -f4| uniq > username.tmp.$$
+                grep "$input_join_final" pre_entry_join.tmp.$$ | cut -d";" -f4| uniq > username.tmp.$$
                 while read -r input_join_final_2
                 do
-                        number_session=$(cat pre_entry_join.tmp.$$ | grep "$input_join_final_2" | wc -l)
-                        first_session=$(cat pre_entry_join.tmp.$$ | grep "$input_join_final_2" | head -n1| cut -d";" -f1-2)
-                        echo "$input_join_final_2;$input_join_final;$number_session;$first_session" >> entry_join.tmp
+                        number_session=$(grep -c "$input_join_final_2" pre_entry_join.tmp.$$)
+                        first_session=$(grep "$input_join_final_2" pre_entry_join.tmp.$$ | head -n1| cut -d";" -f1-2)
+                        echo "$input_join_final_2;$input_join_final;$number_session;$first_session" >> entry_join.tmp.$$
                 done < username.tmp.$$
         done < uniq_mac.tmp.$$
 }
@@ -204,11 +206,11 @@ function func_join_final(){
 function func_leave_final(){
         while read -r input_leave_final
         do
-                cat pre_entry_join.tmp.$$ | grep "$input_leave_final" | cut -d";" -f4| uniq > username.tmp.$$
+                grep "$input_leave_final" pre_entry_join.tmp.$$ | cut -d";" -f4| uniq > username.tmp.$$
                 while read -r input_leave_final_2
                 do
-                        last_session=$(cat pre_entry_leave.tmp.$$ | grep "$input_leave_final_2" | tail -n1 | cut -d";" -f1-2)
-                        cat pre_entry_leave.tmp.$$ | grep "$input_leave_final_2" | cut -d";" -f5-7 > username_leave.tmp.$$
+                        last_session=$(grep "$input_leave_final_2" pre_entry_leave.tmp.$$ | tail -n1 | cut -d";" -f1-2)
+                        grep "$input_leave_final_2" pre_entry_leave.tmp.$$ | cut -d";" -f5-7 > username_leave.tmp.$$
                         time_final=0
                         rx_final=0
                         tx_final=0
@@ -221,7 +223,7 @@ function func_leave_final(){
                                 rx_final=$(echo "scale=0; $rx_final + $rx_tmp" | bc)
                                 tx_final=$(echo "scale=0; $tx_final + $tx_tmp" | bc)
                         done < username_leave.tmp.$$
-                        echo "$input_leave_final_2;$input_leave_final;$last_session;$time_final;$rx_final;$tx_final" >> entry_leave.tmp
+                        echo "$input_leave_final_2;$input_leave_final;$last_session;$time_final;$rx_final;$tx_final" >> entry_leave.tmp.$$
                 done < username.tmp.$$
         done < uniq_mac.tmp.$$
 }
@@ -229,13 +231,12 @@ function func_leave_final(){
 function func_header_csv(){
         if [ -f "$csv_full_path" ]
         then
-                line_orgin_tmp=$(cat "$csv_full_path" | wc -l)
+                line_orgin_tmp=$(wc -l "$csv_full_path" | cut -d" " -f1)
                 line_orgin=$(echo "$line_orgin_tmp -  1" | bc)
-
-                cat "$csv_full_path" | tail -n "$line_orgin" > csv.tmp.$$
-                echo "Username;MAC-Adresse;Anzahl Sessionen;Start Session;Ende Session;Verbindungdauer;Total RX;Total TX" > "$csv_full_path"
+                tail -n "$line_orgin" "$csv_full_path" > csv.tmp.$$
+                echo "MAC-Adresse;Username;Anzahl Sessionen;Start Session;Ende Session;Verbindungdauer;Total RX;Total TX" > "$csv_full_path"
         else
-                echo "Username;MAC-Adresse;Anzahl Sessionen;Start Session;Ende Session;Verbindungdauer;Total RX;Total TX" > "$csv_full_path"
+                echo "MAC-Adresse;Username;Anzahl Sessionen;Start Session;Ende Session;Verbindungdauer;Total RX;Total TX" > "$csv_full_path"
         fi
 }
 
@@ -244,17 +245,17 @@ function func_replace_join_csv(){
         do
                 username_new=$(echo "$input_replace_join_csv" | cut -d";" -f1)
                 mac_new=$(echo "$input_replace_join_csv" | cut -d";" -f2)
-                check_username=$(cat csv.tmp.$$ | grep "$username_new")
-                check_mac=$(cat csv.tmp.$$ | grep "mac_new")
+                check_username=$(grep "$username_new" csv.tmp.$$)
+                check_mac=$(grep "mac_new" csv.tmp.$$)
                 if [ "$check_username" = "" -a "$check_mac" = "" ]
                 then
                         echo "$input_replace_join_csv" >> join_final.tmp.$$
                 else
                         session_new=$(echo "$input_replace_join_csv" | cut -d";" -f3)
-                        session_old=$(cat csv.tmp.$$ | cut -d";" -f3)
+                        session_old=$(cut -d";" -f3csv.tmp.$$)
                         session_temp=$(echo "$session_new + $session_old" | bc)
-                        temp1=$(cat csv.tmp.$$ | cut -d";" -f1-2)
-                        temp2=$(cat csv.tmp.$$ | cut -d";" -f4)
+                        temp1=$(cut -d";" -f1-2 csv.tmp.$$)
+                        temp2=$(cut -d";" -f4 csv.tmp.$$)
                         echo "$temp1;$session_temp;$temp2" >> join_final.tmp.$$
                 fi
         done < entry_join.tmp.$$
@@ -265,23 +266,23 @@ function func_replace_leave_csv(){
         do
                 username_new=$(echo "$input_replace_leave_csv" | cut -d";" -f1)
                 mac_new=$(echo "$input_replace_leave_csv" | cut -d";" -f2)
-                check_username=$(cat csv.tmp.$$ | grep "$username_new")
-                check_mac=$(cat csv.tmp.$$ | grep "$mac_new")
+                check_username=$(grep "$username_new" csv.tmp.$$)
+                check_mac=$(grep "$mac_new" csv.tmp.$$)
                 if [ "$check_username" = "" -a "$check_mac" = "" ]
                 then
                         echo "$input_replace_leave_csv" >> leave_final.tmp.$$
                 else
                         time_new=$(echo "$input_replace_leave_csv" | cut -d";" -f5)
-                        time_old=$(cat csv.tmp.$$ | grep "$username_new"| cut -d";" -f6)
+                        time_old=$(grep "$username_new" csv.tmp.$$ | cut -d";" -f6)
                         rx_new=$(echo "$input_replace_leave_csv" | cut -d";" -f6)
-                        rx_old=$(cat csv.tmp.$$| grep "$username_new" | cut -d";" -f7)
+                        rx_old=$(grep "$username_new" csv.tmp.$$ | cut -d";" -f7)
                         tx_new=$(echo "$input_replace_leave_csv" | cut -d";" -f7)
-                        tx_old=$(cat csv.tmp.$$| grep "$username_new" | cut -d";" -f8)
+                        tx_old=$(grep "$username_new" csv.tmp.$$ | cut -d";" -f8)
                         time_temp=$(echo "$time_new + $time_old" | bc)
                         tx_temp=$(echo "$tx_new + $tx_old" | bc)
                         rx_temp=$(echo "$rx_new + $rx_old" | bc)
-                        temp1=$(cat csv.tmp.$$ | grep "$username_new" | cut -d";" -f1-2)
-                        temp2=$(cat csv.tmp.$$ | grep "$username_new" | cut -d";" -f4)
+                        temp1=$(grep "$username_new" csv.tmp.$$ | cut -d";" -f1-2)
+                        temp2=$(grep "$username_new" csv.tmp.$$ | cut -d";" -f4)
                         echo "$temp1;$temp2;$time_temp;$tx_temp;$rx_temp" >> leave_final.tmp.$$
                 fi
         done < entry_leave.tmp.$$
@@ -294,14 +295,14 @@ function func_replace_csv(){
                 username_join=$(echo "$input_replace_csv" | cut -d";" -f2)
                 session=$(echo "$input_replace_csv" | cut -d";" -f3)
                 time_join=$(echo "$input_replace_csv" | cut -d";" -f4)
-                mac_search=$(cat leave_final.tmp.$$ | grep "$mac_join" | cut -d";" -f1)
-                username_search=$(cat leave_final.tmp.$$ | grep "$username_join"| cut -d";" -f1)
+                mac_search=$(grep "$mac_join" leave_final.tmp.$$ | cut -d";" -f1)
+                username_search=$(grep "$username_join" leave_final.tmp.$$ | cut -d";" -f2)
                 if [ "$mac_search" != "" -a "$username_search" != "" ]
                 then
-                        time_leave=$(cat leave_final.tmp.$$ | grep "$mac_join" | grep "$username_join" | cut -d";" -f4)
-                        tx_leave=$(cat leave_final.tmp.$$ | grep "$mac_join" | grep "$username_join" | cut -d";" -f5)
-                        rx_leave=$(cat leave_final.tmp.$$ | grep "$mac_join" | grep "$username_join" | cut -d";" -f6)
-                        echo "$username_join;$mac_join;$session;$time_join;$time_leave;$time_leave;$tx_leave;$tx_leave" >> "$csv_full_path"
+                        time_leave=$(grep "$mac_join;$username_join" leave_final.tmp.$$ | cut -d";" -f4)
+                        tx_leave=$(grep "$mac_join;$username_join" leave_final.tmp.$$ | cut -d";" -f5)
+                        rx_leave=$(grep "$mac_join;$username_join" leave_final.tmp.$$  | cut -d";" -f6)
+                        echo "$username_join;$mac_join;$session;$time_join;$time_leave;$tx_leave;$rx_leave" >> "$csv_full_path"
                 else
                         echo "$username_join;$mac_join;$session;$time_join;;;;" >> "$csv_full_path"
                 fi
@@ -312,7 +313,7 @@ function func_replace_csv(){
 #  Programm  #
 ##############
 
-func_check
+#func_check
 func_analyse
 func_preparation
 if [ "$database" = "csv" ]
