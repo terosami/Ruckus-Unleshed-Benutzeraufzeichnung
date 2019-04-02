@@ -11,4 +11,9 @@ Script für die Aufzeichnung und Auswertung von Benutzer in einem Ruckus Unleash
 - Web-Übersicht
 
 # Ablauf Diagram
-![Hauptablaufdiagramm] (/img/Funktionsdiagramm.png)
+![Hauptablaufdiagramm](/img/Funktionsdiagramm.png)
+
+# Offene Punkte
+ - [ ] SQL Hinzufügen
+ - [ ] Web-Übersicht CSV
+ - [ ] Web-Übersicht SQL
