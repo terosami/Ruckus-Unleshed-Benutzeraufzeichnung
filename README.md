@@ -9,3 +9,9 @@ Script für die Aufzeichnung und Auswertung von Benutzer in einem Ruckus Unleash
 ## Spätere Funktionen
 - Ausgabe in SQL-Datenbank
 - Web-Übersicht
+
+# Ablauf Diagram
+
+```mermaid
+graph TD
+A[Start] --> B(func_check)
