@@ -5,15 +5,14 @@ Script für die Aufzeichnung und Auswertung von Benutzer in einem Ruckus Unleash
 - Analyse der Syslog-Informationen.
 - Optische Aufbereitung der Daten.
 - Ausgabe in einer CSV-Datei
- 
-## Spätere Funktionen
 - Ausgabe in SQL-Datenbank
 - Web-Übersicht
+ 
+ # Offene Punkte
+ - [ ] SQL Hinzufügen
+ - [ ] Web-Übersicht CSV
+ - [ ] Web-Übersicht SQL
 
 # Ablauf Diagram
 ![Hauptablaufdiagramm](/img/Funktionsdiagramm.png)
 
-# Offene Punkte
- - [ ] SQL Hinzufügen
- - [ ] Web-Übersicht CSV
- - [ ] Web-Übersicht SQL
