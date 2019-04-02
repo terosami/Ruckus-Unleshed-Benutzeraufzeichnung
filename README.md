@@ -11,7 +11,4 @@ Script für die Aufzeichnung und Auswertung von Benutzer in einem Ruckus Unleash
 - Web-Übersicht
 
 # Ablauf Diagram
-
-```mermaid
-graph TD
-A[Start] --> B(func_check)
+![Hauptablaufdiagramm] (img/Funktionsdiagramm.png)
