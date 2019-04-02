@@ -1,0 +1,9 @@
+# generic files to ignore
+# backup files (*~)
+*~
+
+# temp files
+*.tmp*
+
+# test files
+*.csv
